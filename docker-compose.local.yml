@@ -1,0 +1,16 @@
+services:
+  order-service:
+    build: .
+    image: gourmet-go:local
+
+  kitchen-service:
+    build: .
+    image: gourmet-go:local
+
+  accounting-service:
+    build: .
+    image: gourmet-go:local
+
+  order-orchestrator:
+    build: .
+    image: gourmet-go:local

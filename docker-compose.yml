@@ -1,0 +1,105 @@
+services:
+  order-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: order_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5431:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d order_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  kitchen-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: kitchen_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kitchen_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  accounting-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: accounting_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d accounting_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  order-service:
+    image: ${DOCKER_IMAGE:-benrayanayassine/gourmet-go:latest}
+    environment:
+      SPRING_PROFILES_ACTIVE: order
+      ORDER_DB_HOST: order-db
+      ORDER_DB_PORT: 5432
+    ports:
+      - "8081:8081"
+      - "9091:9091"
+    depends_on:
+      order-db:
+        condition: service_healthy
+
+  kitchen-service:
+    image: ${DOCKER_IMAGE:-benrayanayassine/gourmet-go:latest}
+    environment:
+      SPRING_PROFILES_ACTIVE: kitchen
+      KITCHEN_DB_HOST: kitchen-db
+      KITCHEN_DB_PORT: 5432
+    ports:
+      - "8082:8082"
+      - "9092:9092"
+    depends_on:
+      kitchen-db:
+        condition: service_healthy
+
+  accounting-service:
+    image: ${DOCKER_IMAGE:-benrayanayassine/gourmet-go:latest}
+    environment:
+      SPRING_PROFILES_ACTIVE: accounting
+      ACCOUNTING_DB_HOST: accounting-db
+      ACCOUNTING_DB_PORT: 5432
+    ports:
+      - "8083:8083"
+      - "9093:9093"
+    depends_on:
+      accounting-db:
+        condition: service_healthy
+
+  order-orchestrator:
+    image: ${DOCKER_IMAGE:-benrayanayassine/gourmet-go:latest}
+    environment:
+      SPRING_PROFILES_ACTIVE: orchestrator
+      ORDER_DB_HOST: order-db
+      ORDER_DB_PORT: 5432
+      ORDER_SERVICE_HOST: order-service
+      ORDER_SERVICE_PORT: 9091
+      KITCHEN_SERVICE_HOST: kitchen-service
+      KITCHEN_SERVICE_PORT: 9092
+      ACCOUNTING_SERVICE_HOST: accounting-service
+      ACCOUNTING_SERVICE_PORT: 9093
+    ports:
+      - "8080:8080"
+    depends_on:
+      order-db:
+        condition: service_healthy
+      order-service:
+        condition: service_started
+      kitchen-service:
+        condition: service_started
+      accounting-service:
+        condition: service_started

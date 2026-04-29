@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gourmet-Go Orders</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background: #f4f6f8;
+      color: #1d252d;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    main {
+      width: min(920px, 100%);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    section {
+      background: #ffffff;
+      border: 1px solid #d8dee4;
+      border-radius: 8px;
+      padding: 22px;
+      box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+    }
+
+    h1 {
+      grid-column: 1 / -1;
+      margin: 0 0 2px;
+      font-size: 32px;
+      line-height: 1.1;
+    }
+
+    h2 {
+      margin: 0 0 18px;
+      font-size: 18px;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 14px;
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid #b8c2cc;
+      border-radius: 6px;
+      padding: 0 12px;
+      font: inherit;
+    }
+
+    button {
+      min-height: 42px;
+      border: 0;
+      border-radius: 6px;
+      padding: 0 16px;
+      background: #0f766e;
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.secondary { background: #334155; }
+
+    pre {
+      min-height: 120px;
+      margin: 18px 0 0;
+      padding: 14px;
+      overflow: auto;
+      white-space: pre-wrap;
+      border-radius: 6px;
+      background: #111827;
+      color: #e5e7eb;
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 760px) {
+      main { grid-template-columns: 1fr; }
+      h1 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Gourmet-Go Order System</h1>
+
+  <section>
+    <h2>Create Order</h2>
+    <form id="create-form">
+      <label>
+        Order ID
+        <input id="order-id" name="orderId" placeholder="ORD-1001" required>
+      </label>
+      <label>
+        Amount
+        <input id="amount" name="amount" type="number" min="0" step="0.01" value="49.99" required>
+      </label>
+      <div class="actions">
+        <button type="submit">Create</button>
+        <button class="secondary" type="button" id="fail-demo">Failure demo</button>
+      </div>
+    </form>
+    <pre id="create-output">Ready.</pre>
+  </section>
+
+  <section>
+    <h2>Order Status</h2>
+    <form id="status-form">
+      <label>
+        Order ID
+        <input id="status-order-id" placeholder="ORD-1001" required>
+      </label>
+      <button type="submit">Check Status</button>
+    </form>
+    <pre id="status-output">No order selected.</pre>
+  </section>
+</main>
+
+<script>
+  const createForm = document.querySelector("#create-form");
+  const statusForm = document.querySelector("#status-form");
+  const createOutput = document.querySelector("#create-output");
+  const statusOutput = document.querySelector("#status-output");
+  const orderIdInput = document.querySelector("#order-id");
+  const statusOrderIdInput = document.querySelector("#status-order-id");
+  const amountInput = document.querySelector("#amount");
+
+  function show(target, value) {
+    target.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  }
+
+  async function createOrder(orderId, amount) {
+    const params = new URLSearchParams({ orderId, amount });
+    const response = await fetch(`/api/orchestrator/execute-saga?${params}`, { method: "POST" });
+    const payload = await response.json();
+    show(createOutput, payload);
+    statusOrderIdInput.value = orderId;
+    await loadStatus(orderId);
+  }
+
+  async function loadStatus(orderId) {
+    const response = await fetch(`/api/orchestrator/orders/${encodeURIComponent(orderId)}`);
+    const payload = await response.json();
+    show(statusOutput, payload);
+  }
+
+  createForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await createOrder(orderIdInput.value.trim(), amountInput.value);
+  });
+
+  statusForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await loadStatus(statusOrderIdInput.value.trim());
+  });
+
+  document.querySelector("#fail-demo").addEventListener("click", async () => {
+    const orderId = `ORD-${Date.now()}`;
+    orderIdInput.value = orderId;
+    amountInput.value = "150.00";
+    await createOrder(orderId, amountInput.value);
+  });
+</script>
+</body>
+</html>
